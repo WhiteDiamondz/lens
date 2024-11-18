@@ -79,7 +79,7 @@ const addMetricsRouteInjectable = getRouteInjectable({
         if (!prometheusPath) {
           prometheusMetadata.success = false;
 
-          return { response: {}};
+          return { response: {} };
         }
 
         // return data in same structure as query
@@ -97,9 +97,12 @@ const addMetricsRouteInjectable = getRouteInjectable({
 
         if (isObject(payload)) {
           const data = payload as Record<string, Record<string, string>>;
+          const queryFilterPreferences: Record<string, string> = cluster.preferences.prometheusQueryOptions ?
+            Object.fromEntries(Object.entries(cluster.preferences.prometheusQueryOptions).map(([k, v]) => [k, String(v)]))
+            : {};
           const queries = object.entries(data)
             .map(([queryName, queryOpts]) => (
-              provider.getQuery(queryOpts, queryName)
+              provider.getQuery({ ...queryOpts, ...queryFilterPreferences }, queryName)
             ));
 
           const result = await loadMetrics(queries, cluster, prometheusPath, queryParams);
@@ -110,13 +113,13 @@ const addMetricsRouteInjectable = getRouteInjectable({
           return { response };
         }
 
-        return { response: {}};
+        return { response: {} };
       } catch (error) {
         prometheusMetadata.success = false;
 
         logger.warn(`[METRICS-ROUTE]: failed to get metrics for clusterId=${cluster.id}:`, error);
 
-        return { response: {}};
+        return { response: {} };
       } finally {
         runInAction(() => {
           cluster.metadata[ClusterMetadataKey.PROMETHEUS] = prometheusMetadata;
